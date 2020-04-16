@@ -11,6 +11,11 @@ locals {
         ),
         index
       )}"
+      k8s_roles = lookup(
+        var.worker_groups_launch_template[index],
+        "k8s_roles",
+        local.workers_group_defaults["k8s_roles"]
+      )
       platform = lookup(
         var.worker_groups_launch_template[index],
         "platform",
@@ -29,6 +34,11 @@ locals {
         ),
         index,
       )}"
+      k8s_roles = lookup(
+        var.worker_groups[index],
+        "k8s_roles",
+        local.workers_group_defaults["k8s_roles"]
+      )
       platform = lookup(
         var.worker_groups[index],
         "platform",
@@ -48,10 +58,7 @@ locals {
       rolearn  = role["worker_role_arn"]
       username = "system:node:{{EC2PrivateDNSName}}"
       groups = concat(
-        [
-          "system:bootstrappers",
-          "system:nodes",
-        ],
+        role["k8s_roles"],
         role["platform"] == "windows" ? ["eks:kube-proxy-windows"] : []
       )
     }

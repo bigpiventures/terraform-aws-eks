@@ -9,6 +9,7 @@ output "aws_auth_roles" {
     for k, v in local.node_groups_expanded : {
       worker_role_arn = lookup(v, "iam_role_arn", var.default_iam_role_arn)
       platform        = "linux"
+      k8s_roles = ["system:bootstrappers", "system:nodes"]
     }
   ]
 }
