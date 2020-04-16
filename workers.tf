@@ -339,8 +339,8 @@ resource "aws_security_group_rule" "workers_ingress_cluster_https" {
 }
 
 resource "aws_iam_role" "workers" {
-  count                 = var.manage_worker_iam_resources && var.create_eks ? 1 : 0
-  name_prefix           = var.workers_role_name != "" ? null : aws_eks_cluster.this[0].name
+  count                 = var.manage_worker_iam_resources && var.create_eks ? local.worker_group_launch_template_count : 0
+  name_prefix           = var.workers_role_name != "" ? null : "${aws_eks_cluster.this[0].name}-${var.worker_groups_launch_template[count.index].name}"
   name                  = var.workers_role_name != "" ? var.workers_role_name : null
   assume_role_policy    = data.aws_iam_policy_document.workers_assume_role_policy.json
   permissions_boundary  = var.permissions_boundary
@@ -362,25 +362,25 @@ resource "aws_iam_instance_profile" "workers" {
 }
 
 resource "aws_iam_role_policy_attachment" "workers_AmazonEKSWorkerNodePolicy" {
-  count      = var.manage_worker_iam_resources && var.create_eks ? 1 : 0
+  count      = var.manage_worker_iam_resources && var.create_eks ? local.worker_group_launch_template_count : 0
   policy_arn = "${local.policy_arn_prefix}/AmazonEKSWorkerNodePolicy"
-  role       = aws_iam_role.workers[0].name
+  role       = aws_iam_role.workers[count.index].name
 }
 
 resource "aws_iam_role_policy_attachment" "workers_AmazonEKS_CNI_Policy" {
-  count      = var.manage_worker_iam_resources && var.attach_worker_cni_policy && var.create_eks ? 1 : 0
+  count      = var.manage_worker_iam_resources && var.attach_worker_cni_policy && var.create_eks ? local.worker_group_launch_template_count : 0
   policy_arn = "${local.policy_arn_prefix}/AmazonEKS_CNI_Policy"
-  role       = aws_iam_role.workers[0].name
+  role       = aws_iam_role.workers[count.index].name
 }
 
 resource "aws_iam_role_policy_attachment" "workers_AmazonEC2ContainerRegistryReadOnly" {
-  count      = var.manage_worker_iam_resources && var.create_eks ? 1 : 0
+  count      = var.manage_worker_iam_resources && var.create_eks ? local.worker_group_launch_template_count : 0
   policy_arn = "${local.policy_arn_prefix}/AmazonEC2ContainerRegistryReadOnly"
-  role       = aws_iam_role.workers[0].name
+  role       = aws_iam_role.workers[count.index].name
 }
 
 resource "aws_iam_role_policy_attachment" "workers_additional_policies" {
-  count      = var.manage_worker_iam_resources && var.create_eks ? length(var.workers_additional_policies) : 0
-  role       = aws_iam_role.workers[0].name
-  policy_arn = var.workers_additional_policies[count.index]
+  count      = var.manage_worker_iam_resources && var.create_eks ? (local.worker_group_launch_template_count * length(var.workers_additional_policies)) : 0
+  role       = aws_iam_role.workers[count.index / length(var.workers_additional_policies)].name
+  policy_arn = var.workers_additional_policies[count.index % length(var.workers_additional_policies)]
 }
